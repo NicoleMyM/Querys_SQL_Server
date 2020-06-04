@@ -1,0 +1,68 @@
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+
+-- =============================================
+-- Author		:		
+-- Create date 	: 
+-- Release date	: 
+-- Description 	:	
+-- =============================================
+CREATE FUNCTION [dbo].[GETCONCATENATION]
+(	--Example 1,2,3,4
+	@list_concatenationID VARCHAR(100)	
+)
+RETURNS VARCHAR(300)	
+AS
+BEGIN
+
+	DECLARE @result VARCHAR(300) = ''
+	DECLARE @ITEM_ID INT
+	
+	IF @list_concatenationID <> '' OR @list_concatenationID != '-1'
+	
+		IF CHARINDEX(',',@list_concatenationID,0) > 0
+			BEGIN 
+				-- For each ID find the name.
+				DECLARE ITEM_CURSOR CURSOR
+				FOR
+				SELECT PARSENAME(REPLACE(Split.a.value('.', 'VARCHAR(100)'),'-','.'),1) 'Values' 
+				FROM (
+					 SELECT 
+					 CAST ('<M>' + REPLACE(@list_concatenationID, ',', '</M><M>') + '</M>' AS XML) AS Data 
+				) AS A CROSS APPLY Data.nodes ('/M') AS Split(a)	
+
+				OPEN ITEM_CURSOR
+				FETCH NEXT FROM ITEM_CURSOR INTO @ITEM_ID
+				WHILE @@FETCH_STATUS = 0
+				BEGIN
+ 
+					SELECT @result = CONCAT(@result,',',NAME)
+					FROM dbo.NAME_TABLE
+					WHERE ID = @ITEM_ID
+ 
+					FETCH NEXT FROM ITEM_CURSOR INTO @ITEM_ID
+ 
+				END
+				CLOSE ITEM_CURSOR  
+				DEALLOCATE ITEM_CURSOR
+
+				SET @result = SUBSTRING(@result,2,300);
+			END
+		ELSE
+			BEGIN
+				-- With the ID find the name.
+				SELECT @result = NAME
+				FROM dbo.NAME_TABLE
+				WHERE ID = @list_concatenationID				
+			END		
+
+RETURN @result
+END;
+
+
+
+GO
